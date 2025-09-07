@@ -41,6 +41,11 @@ fastify.register(require('@fastify/static'),{
 //app.use(express.static("public"))
 
 
+
+
+
+//jitne bhi plugins create krenge khud sbko register krna pdta hai hume server.js mai 
+
 //REGISTER CUSTOM PLUGINS
 fastify.register(require("./plugins/mongodb.js"))
 fastify.register(require("./plugins/jwt.js"))

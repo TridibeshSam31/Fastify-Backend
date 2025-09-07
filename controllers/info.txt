@@ -1,0 +1,110 @@
+🏎️ 1. Fastify’s Core Philosophy
+
+Fastify is built around:
+
+Performance → It’s one of the fastest Node.js frameworks.
+
+Schema-first → Strong focus on request/response validation using JSON Schema.
+
+Plugins → Encapsulation and reusability.
+
+Async-first → Fully supports async/await out of the box.
+
+Whereas Express feels like a “glorified router,” Fastify feels like a “framework with guardrails.”
+
+
+
+📂 2. File Uploads in Fastify
+
+In Express you’d typically use multer (loads the entire file in memory, then saves).
+In Fastify, uploads are handled via streams from the fastify-multipart plugin.
+
+Why streams?
+
+You don’t block memory with large files.
+
+Data flows chunk by chunk, so it’s efficient.
+
+Key Concepts:
+
+request.parts() → Async iterator that yields each part of a multipart request.
+
+part.file → The actual stream if it’s a file.
+
+part.value → Field value if it’s plain text.
+
+You can mix text + file in one request.
+
+
+what are parts that we used in thumbnail.js ????
+
+1. What is parts() in Fastify?
+
+request.parts() comes from the @fastify/multipart
+ plugin.
+
+It returns an async iterator that lets you loop over all parts of a multipart request.
+
+A multipart request can contain:
+
+Files (binary data streams)
+
+Fields (regular text input like name, email, etc.)
+
+Or mixed (fields + files together)
+
+
+Think of parts() as:
+👉 “Give me every chunk of the multipart request one by one.”
+
+2. What does each part look like?
+Each part is an object with different properties depending on whether it’s a file or a field
+eg if its a file
+{
+  type: 'file',
+  fieldname: 'thumbnail',   // name of the field in the form
+  filename: 'cat.png',      // original filename
+  encoding: '7bit',
+  mimetype: 'image/png',
+  file: ReadableStream      // the actual file data stream
+}
+If it’s a field:
+{
+  type: 'field',
+  fieldname: 'videoName',
+  value: 'My Travel Vlog',
+  fieldnameTruncated: false,
+  valueTruncated: false
+}
+Notice the difference:
+
+File → has a .file property (stream).in the 1st example we use filename as cat.png where as in the second example we just used filename as a string
+Field → has a .value property (string).
+
+3. How do we use it?
+Since parts() is an async iterator, you use for await ... of:
+const parts = request.parts();
+
+for await (const part of parts) {
+  if (part.file) {
+    // It's a file → save it
+    const saveTo = path.join("uploads", Date.now() + "-" + part.filename);
+    await pipelineAsync(part.file, fs.createWriteStream(saveTo));
+  } else {
+    // It's a field → collect it
+    fields[part.fieldname] = part.value;
+  }
+}
+This lets you handle multiple files and fields in a single request.
+
+
+Why not request.body?
+In a multipart/form-data request, request.body doesn’t contain the file streams.
+Files come as streams to avoid loading the whole thing into memory (important for large files).
+That’s why Fastify uses request.parts() instead of giving you everything in body.
+
+Big Picture (Compared to Express/Multer)
+Express + Multer: Parses the whole request, buffers the file, gives you req.file or req.files.
+Fastify + Multipart (parts()): Streams each part as it arrives, so you can process files without buffering everything.
+This makes Fastify more memory-efficient and faster for large file uploads.
+

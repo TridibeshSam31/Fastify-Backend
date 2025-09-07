@@ -13,3 +13,5 @@ module.exports = fp(async function(fastify, opts) {
     }
   })
 })
+
+//directly docts se uthaya
